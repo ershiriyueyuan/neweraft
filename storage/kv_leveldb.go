@@ -11,6 +11,7 @@ type LevelDBKvStore struct {
 
 func makeLevelDBKvStore() *LevelDBKvStore {
 	return &LevelDBKvStore{
-
+		Path: path,
+		db: nil,
 	}
 }
