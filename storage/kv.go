@@ -1,5 +1,6 @@
 package storage
 
+
 type KvStore interface {
 	Put(k string, v string) error
 	Get(k string) (string, error)
@@ -7,11 +8,16 @@ type KvStore interface {
 	Close() error
 }
 
-func Engineerfactory(name string) KvStore {
+func Engineerfactory(name string,dbpath string) KvStore {
 	switch name {
 	case "leveldb":
-		return MakeLevelDBKvStore()
+		levelDB,err := MakeLevelDBKvStore(dbpath)
+		if err != nil {
+			panic(err)
+		}
+		return levelDB
 	default:
 		return nil
 	}
+
 }

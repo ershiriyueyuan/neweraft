@@ -10,20 +10,15 @@ type LevelDBKvStore struct {
 	db *leveldb.DB
 }
 
-func MakeLevelDBKvStore() *LevelDBKvStore {
-	return &LevelDBKvStore{
-		Path: "./data",
-		db: nil,
-	}
-}
-
-func (l *LevelDBKvStore) Open() error {
-	db,err :=leveldb.OpenFile(l.Path,nil)
+func MakeLevelDBKvStore(dbpath string) (*LevelDBKvStore,error) {
+	db,err:=leveldb.OpenFile(dbpath,nil)
 	if err != nil {
-		return err
-	}
-	l.db = db
-	return nil
+    return nil, err  // 必须处理错误
+	}	
+	return &LevelDBKvStore{
+		Path: dbpath,
+		db: db,
+	},err
 }
 
 func (l *LevelDBKvStore) Close() error {
