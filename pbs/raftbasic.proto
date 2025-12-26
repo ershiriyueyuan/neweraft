@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package raftpb;
+
+option go_package="../raftpb";
+
+message VoteRequest {
+    int64 CurTerm = 1; 
+    int64 SefId = 2;
+}
+
+message VoteResponse{
+    int64 CurTerm = 1;
+    bool VoteGranted = 2;    
+}
+
+message AppendEntryRequest{
+    int64 CurTerm =1;
+}
+
+message AppendEntryResponse{
+
+}
+
+
+service MessageService {
+    rpc RequestVote (VoteRequest) returns (VoteResponse);
+    rpc AppendEntry (AppendEntryRequest) returns (AppendEntryResponse);
+}
