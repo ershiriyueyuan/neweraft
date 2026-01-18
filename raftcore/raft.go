@@ -5,6 +5,7 @@ import(
 	"sync"
 	"time"
 	"context"
+	"math/rand"
 
 	pb "neweraft/raftpb"
 )
@@ -35,9 +36,9 @@ type Raft struct {
 	heartTime time.Duration
 }
 
-func MakeRaft(addr string,id int64,peers []*RaftClient) *Raft{
-	electionTime:=300*time.Millisecond
-	heartTime:=50*time.Millisecond
+func MakeRaft(id int64,peers []*RaftClient) *Raft{
+	electionTime:=time.Duration(500 + rand.Intn(150)) * time.Millisecond
+	heartTime:=100*time.Millisecond
 	raft:=&Raft{
 		id:id,
 		role:RaftFollower,
@@ -48,8 +49,11 @@ func MakeRaft(addr string,id int64,peers []*RaftClient) *Raft{
 		peers:peers,
 		deadIf:false,
 		curTerm:0,
+		electionTime: electionTime,
+		heartTime: heartTime,
 	}
-
+	raft.heartTimer.Stop()
+	raft.electionTimer.Reset(raft.electionTime)
 	go raft.Tick() 
 
 	return raft
@@ -59,8 +63,10 @@ func(raft *Raft) Tick(){
 	for !raft.isKill() {
 		select{
 		case <-raft.electionTimer.C:
+			if(raft.role==RaftLeader){
+				break
+			}
 			raft.switchRole(RaftCandidate)
-			raft.election()
 			raft.electionTimer.Reset(raft.electionTime)
 		case <-raft.heartTimer.C:
 			raft.broadcastHeart()
@@ -70,15 +76,16 @@ func(raft *Raft) Tick(){
 }
 
 func (raft *Raft)switchRole(newRole RaftRole) {
-
+	raft.mu.Lock()
 	if raft.role==newRole{
+		raft.mu.Unlock()
 		return
 	}
-	raft.mu.Lock()
+	log.Printf("Node %d state change: %d -> %d (Term %d)", raft.id, raft.role, newRole, raft.curTerm)
 	raft.role=newRole
 	raft.mu.Unlock()
 
-	switch raft.role{
+	switch newRole{
 	case RaftCandidate:
 		raft.election()
 	case RaftFollower:
@@ -111,11 +118,11 @@ func (raft *Raft)replicateOneround(peer *RaftClient) {
 	}
 
 
-	ctx,cancel:=context.WithTimeout(context.Background(),100 * time.Millisecond)
+	ctx,cancel:=context.WithTimeout(context.Background(),200 * time.Millisecond)
 	defer cancel()
 	appendEntryResponse,err:=peer.MessageServiceClient.AppendEntry(ctx,appendEntryRequest)
 	if err!=nil {
-		log.Printf("AppendEntryResponse %d error",peer.id)
+		// log.Printf("AppendEntryResponse %d error: %v",peer.id, err)
 	}
 
 	_ = appendEntryResponse 
@@ -123,13 +130,23 @@ func (raft *Raft)replicateOneround(peer *RaftClient) {
 
 func (raft *Raft)HandleRequestVote(req *pb.VoteRequest,res *pb.VoteResponse){
 	if(raft.curTerm<=req.CurTerm){
+		raft.switchRole(RaftFollower)
 		res.VoteGranted=true
+	} else {
+		raft.switchRole(RaftCandidate)
+		res.VoteGranted=false   
+
 	}
 
 	raft.electionTimer.Reset(raft.electionTime)
 }
 
-func (raft *Raft)HandleAppendEntry(){
+func (raft *Raft)HandleAppendEntry(req *pb.AppendEntryRequest,res *pb.AppendEntryResponse){
+	if(req.CurTerm<raft.curTerm){
+
+	}
+	raft.curTerm=req.CurTerm
+	raft.switchRole(RaftFollower)
 	raft.electionTimer.Reset(raft.electionTime)
 }
 
@@ -154,15 +171,18 @@ func(raft *Raft) election(){
 				SefId:raft.id,
 			}
 
-			ctx,cancel :=context.WithTimeout(context.Background(),100 * time.Millisecond)
+			ctx,cancel :=context.WithTimeout(context.Background(),200 * time.Millisecond)
 			defer cancel()
 			voteResponse,err:=p.MessageServiceClient.RequestVote(ctx,voteRequest)
 			if err!=nil {
-			log.Printf("voteResponse %d error",peer.id)
-		}
+				log.Printf("voteResponse %d error: %v",p.id, err)
+				return
+			}
 
 			if voteResponse.VoteGranted {
+				raft.mu.Lock()
 				raft.countVote++
+				raft.mu.Unlock()
 			}
 
 			if raft.countVote>int64((len(raft.peers))/2) {

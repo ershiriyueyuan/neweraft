@@ -1,10 +1,10 @@
 package raftcore
 
-import{
+import(
 
-}
+)
 
-LogEntry struct{
+type LogEntry struct{
 	Index int
 	Term int
 

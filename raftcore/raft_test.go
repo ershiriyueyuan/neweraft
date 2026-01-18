@@ -26,7 +26,7 @@ return m.appendEntryResponse, m.err
 
 func TestMakeRaft(t *testing.T) {
 peers := []*RaftClient{}
-raft := MakeRaft("127.0.0.1:8000", 1, peers)
+raft := MakeRaft(1, peers)
 
 if raft.id != 1 {
 t.Errorf("expected id 1, got %d", raft.id)
@@ -43,7 +43,7 @@ raft.deadIf = true
 
 func TestHandleRequestVote(t *testing.T) {
 peers := []*RaftClient{}
-raft := MakeRaft("127.0.0.1:8000", 1, peers)
+raft := MakeRaft(1, peers)
 raft.deadIf = true 
 
 req := &pb.VoteRequest{
@@ -79,7 +79,7 @@ peer2 := &RaftClient{id: 2, MessageServiceClient: mockClient}
 peer3 := &RaftClient{id: 3, MessageServiceClient: mockClient}
 peers := []*RaftClient{peer1, peer2, peer3}
 
-raft := MakeRaft("127.0.0.1:8000", 1, peers)
+raft := MakeRaft(1, peers)
 raft.deadIf = true 
 
 // Manually trigger election
@@ -101,7 +101,7 @@ t.Errorf("expected term incremented to 1, got %d", raft.curTerm)
 
 func TestSwitchRole(t *testing.T) {
 peers := []*RaftClient{}
-raft := MakeRaft("127.0.0.1:8000", 1, peers)
+raft := MakeRaft(1, peers)
 raft.deadIf = true
 
 raft.switchRole(RaftCandidate)
