@@ -122,6 +122,9 @@ func (raft *Raft)replicateOneround(peer *RaftClient) {
 	defer cancel()
 	appendEntryResponse,err:=peer.MessageServiceClient.AppendEntry(ctx,appendEntryRequest)
 	if err!=nil {
+		peer=MakeRaftClient(peer.addr,peer.id)
+		raft.peers[peer.id]=peer
+		appendEntryResponse,_=peer.MessageServiceClient.AppendEntry(ctx,appendEntryRequest)
 		// log.Printf("AppendEntryResponse %d error: %v",peer.id, err)
 	}
 
