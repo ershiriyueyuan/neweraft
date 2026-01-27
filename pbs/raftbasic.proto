@@ -16,12 +16,31 @@ message VoteResponse{
 
 message AppendEntryRequest{
     int64 CurTerm =1;
+    int64 LeaderId=2;
+    int64 PreLogIndex=3;
+    int64 PreLogTerm=4;
+    int64 CommitIndex=5;
+    repeated Entry Entries=6;
 }
 
 message AppendEntryResponse{
-
+    int64 Term=1;
+    bool Success=2;
+    int64 ConflictIndex=3;
+    int64 ConflictTerm=4;
 }
 
+enum Entrytype{
+    EntryNormal=0;
+    EntryConfig=1;
+}
+
+message Entry{
+    Entrytype EntryType=1;
+    int64 CurTerm=2;
+    int64 Index=3;
+    bytes date=4;
+}
 
 service MessageService {
     rpc RequestVote (VoteRequest) returns (VoteResponse);

@@ -3,9 +3,11 @@ package shardkvserver
 import(
 	"sync"
 	"context"
+	"fmt"
 	
 	"neweraft/raftcore"
 	pb "neweraft/raftpb"
+	"neweraft/storage"
 )
 
 type ShardServer struct{
@@ -24,8 +26,9 @@ func MakeShardServer(peersAddrsMap map[int]string,idMe int64) *ShardServer{
 		peer:=raftcore.MakeRaftClient(addr,int64(id))
 		peers=append(peers,peer)
 	}
+	logeng:=storage.Engineerfactory("leveldb",fmt.Sprintf("./out/data/log/%d_log",idMe))
 
-	raft:=raftcore.MakeRaft(idMe,peers)
+	raft:=raftcore.MakeRaft(idMe,peers,logeng)
 
 	shardServer:=&ShardServer{
 		raft:raft,
